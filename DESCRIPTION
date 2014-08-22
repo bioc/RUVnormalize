@@ -1,0 +1,19 @@
+Package: RUVnormalize
+Title: RUV for normalization of expression array data
+Version: 0.99.0
+Date: 2013-11-10
+Author: Laurent Jacob
+Maintainer: Laurent Jacob <laurent.jacob@univ-lyon1.fr>
+Description: RUVnormalize is meant to remove unwanted variation from
+        gene expression data when the factor of interest is not
+        defined, e.g., to clean up a dataset for general use or to do
+        any kind of unsupervised analysis.
+License: GPL-3
+LazyLoad: yes
+Imports: RUVnormalizeData, Biobase
+Suggests:
+Enhances: spams
+Depends: R (>= 2.10.0)
+NeedsCompilation: no
+biocViews: StatisticalMethod, Normalization
+BuildVignettes: true

@@ -1,0 +1,14 @@
+export('iterativeRUV', 'naiveRandRUV', 'naiveReplicateRUV', 'clScore', 'svdPlot')
+
+import('RUVnormalizeData')
+
+importFrom('Biobase', exprs, phenoData, featureData, annotation)
+
+## if( 'spams' %in% rownames(utils::installed.packages()) ) {
+##     importFrom('spams', 'spams.trainDL', 'spams.lasso', 'spams.omp')
+## }
+
+## importClassesFrom('Matrix', index, number, replValue)
+## import('IRanges')
+## importFrom('GenomicRanges', GRanges, GRangesList)
+##importFrom('GenomicFeatures', makeTranscriptDbFromGFF, exonsBy)

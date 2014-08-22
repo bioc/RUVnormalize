@@ -1,0 +1,598 @@
+%\VignetteIndexEntry{RUVnormalize}
+%\VignettePackage{RUVnormalize}
+
+
+\documentclass[11pt]{article}
+
+\usepackage{times}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{natbib}
+\usepackage[pdftex]{graphicx}
+\usepackage{url}
+\SweaveOpts{keep.source=TRUE,eps=TRUE,pdf=TRUE,prefix=TRUE} 
+
+% R part
+\newcommand{\R}[1]{{\textsf{#1}}}
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+\newcommand{\Rclass}[1]{{\textit{#1}}}
+\newcommand{\Metas}[1]{{\texttt{#1}}}
+
+\begin{document}
+\title{RUV for normalization of expression array data}
+\author{Laurent Jacob}
+
+\maketitle
+\begin{abstract}
+  When dealing with large scale gene expression studies, observations
+  are commonly contaminated by sources of unwanted variation such as
+  platforms or batches. Not taking this unwanted variation into
+  account when analyzing the data can lead to spurious associations
+  and to missing important signals. When the analysis is unsupervised,
+  \emph{e.g.} when the goal is to cluster the samples or to build a
+  corrected version of the dataset --- as opposed to the study of an
+  observed factor of interest --- taking unwanted variation into
+  account can become a difficult task. The factors driving unwanted
+  variation may be correlated with the unobserved factor of interest,
+  so that correcting for the former can remove the latter if not done
+  carefully. \Rpackage{RUVnormalize} implements methods described
+  in~\cite{Jacob2012Correcting} to estimate and remove unwanted
+  variation from microarray gene expression data. These methods rely
+  on negative control genes and replicate samples.
+\end{abstract}
+
+\section{Introduction}
+
+Over the last few years, microarray-based gene expression studies
+involving a large number of samples have been
+conducted~\citep{Cardoso2007MINDACT,Network2008Comprehensive}, with
+the goal of helping understand or predict some particular
+\emph{factors of interest} like the prognosis or the subtypes of a
+cancer. Such large gene expression studies are often carried out over
+several years, may involve several hospitals or research centers and
+typically contain some \emph{unwanted variation}. Sources of unwanted
+variation can be technical elements such as batches, different
+platforms or laboratories, or any biological signal which is not the
+factor of interest of the study such as heterogeneity in ages or
+different ethnic groups.
+
+Unwanted variation can easily lead to spurious associations. For
+example when one is looking for genes which are differentially
+expressed between two subtypes of cancer, the observed differential
+expression of some genes could actually be caused by differences
+between laboratories if laboratories are partially confounded with
+subtypes. When doing clustering to identify new subgroups of the
+disease, one may actually identify some of the unwanted factors if
+their effects on gene expression are stronger than the subgroup
+effect. If one is interested in predicting prognosis, one may actually
+end up predicting whether the sample was collected at the beginning or
+at the end of the study because better prognosis patients were
+accepted at the end of the study. In this case, the classifier
+obtained would have little value for predicting the prognosis of new
+patients.
+
+Similar problems arise when trying to combine several smaller studies
+rather than working on one large heterogeneous study: in a dataset
+resulting from the merging of several studies the strongest effect one
+can observe is generally related to the membership of samples to
+different studies. A very important objective is therefore to remove
+this unwanted variation without losing the variation of interest.
+
+A large number of methods have been proposed to tackle this problem,
+mostly using linear models. When both the factor of interest and the
+unwanted factors are observed, the problem essentially boils down to a
+linear regression~\citep{Johnson2007Adjusting}. When the factor of
+interest is observed but the unwanted factors are not, the latter need
+to be estimated before a regression is possible. This is typically
+done using the covariance structure of the gene expression
+matrix~\citep{Kang2008Accurate}, the residuals after an ordinary
+regression~\citep{Leek2007Capturing, Listgarten2010Correction} or
+negative control genes~\citep{Gagnon-Bartsch2012Using}. Finally if the
+factor of interest itself is not defined, some
+methods~\citep{Alter2000Singular} use singular value decomposition
+(SVD) on gene expression to identify and remove the unwanted variation
+and others~\citep{Benito2004Adjustment} remove observed batches by
+linear regression.
+
+\Rpackage{RUVnormalize} addresses this latter case where there is no
+predefined factor of interest. This situation arises when performing
+unsupervised estimation tasks such as clustering or PCA, in the
+presence of unwanted variation. It can also be the case that one needs
+to normalize a dataset without knowing which factors of interest will
+be studied. Our main objective is to correct the gene expression by
+estimating and removing the unwanted variation, without removing the
+--- unobserved --- variation of interest. 
+
+For more detail about the statistical model and method,
+see~\cite{Jacob2012Correcting} and references therein.
+
+\section{Software features}
+
+\Rpackage{RUVnormalize} takes as input gene expression data, negative
+control genes and replicate samples, and offers the following
+functionalities:
+\begin{description}
+\item[Gene expression correction] \Rpackage{RUVnormalize} estimates
+  the unwanted variation from negative control genes or replicate
+  samples and removes it from the input gene expression data,
+  returning a corrected matrix.
+\item[Representation] \Rpackage{RUVnormalize} provides a function to
+  represent the influence of unwanted variation on gene expression.
+\end{description}
+
+\section{Case studies}
+
+We now show on a particular dataset how
+\Rpackage{RUVnormalize} can be used to remove unwanted variation from
+gene expression data.
+
+\cite{Vawter2004Gender} systematically measured the expression of
+$12,600$ genes for $5$ male and $5$ female patients, with the goal to
+study gender related differential expression. The samples come from
+different brain regions and are hybridized from different labs, both
+of which affect gene expression. Ideally, a correction method applied
+to this dataset would remove the effect of these unwanted sources of
+variation without affecting the gender signal.
+
+We apply various correction methods on this dataset and assess how
+well the corrected data clusters by gender.
+
+\subsection{Loading the library and the data}
+
+We load the \Rpackage{RUVnormalize} package by typing or pasting the
+following codes in R command line. We also need the \Rpackage{spams } package.
+
+<<lib, echo=TRUE>>=
+library(RUVnormalize)
+library(RUVnormalizeData)
+@
+
+We then load the expression data, control genes and known factors
+affecting the expression:
+<<data, echo=TRUE>>=
+data('gender', package='RUVnormalizeData')
+
+Y <- t(exprs(gender))
+X <- as.numeric(phenoData(gender)$gender == 'M')
+X <- X - mean(X)
+X <- cbind(X/(sqrt(sum(X^2))))
+chip <- annotation(gender)
+
+## Extract regions and labs for plotting purposes
+lregions <- sapply(rownames(Y),FUN=function(s) strsplit(s,'_')[[1]][2])
+llabs <- sapply(rownames(Y),FUN=function(s) strsplit(s,'_')[[1]][3])
+
+## Dimension of the factors
+m <- nrow(Y)
+n <- ncol(Y)
+p <- ncol(X)
+
+Y <- scale(Y, scale=FALSE) # Center gene expressions
+
+cIdx <- which(featureData(gender)$isNegativeControl) # Negative control genes
+
+## Number of genes kept for clustering, based on their variance
+nKeep <- 1260
+@
+
+We prepare variables which will then be used to plot the data before
+and after correction.
+
+<<plotPrep, echo=TRUE>>=
+## Prepare plots
+annot <- cbind(as.character(sign(X)))
+colnames(annot) <- 'gender'
+plAnnots <- list('gender'='categorical')
+lab.and.region <- apply(rbind(lregions, llabs),2,FUN=function(v) paste(v,collapse='_'))
+gender.col <- c('-1' = "deeppink3", '1' = "blue")
+@
+
+Gene expression in this dataset is strongly affected by a platform
+effect. This effect is reasonably well corrected by centering the data
+by platform, so we apply this centering as a pre-processing.
+
+<<centering, echo=TRUE>>=
+## Remove platform effect by centering.
+Y[chip=='hgu95a.db',] <- scale(Y[chip=='hgu95a.db',], scale=FALSE)
+Y[chip=='hgu95av2.db',] <- scale(Y[chip=='hgu95av2.db',], scale=FALSE)
+@ 
+
+Some correction methods use a table describing which samples are
+replicates of each others. The table has as many columns as the
+largest set of replicates for one sample. Each row corresponds to a
+set of replicates of the same sample and gives the row indices of the
+replicates in the gene expression matrix, padded with -1 entries.
+
+<<scidx, echo=TRUE>>=
+## Prepare control samples
+scIdx <- matrix(-1,84,3)
+rny <- rownames(Y)
+added <- c()
+c <- 0
+
+# Replicates by lab
+for(r in 1:(length(rny) - 1)){
+  if(r %in% added)
+    next
+  c <- c+1
+  scIdx[c,1] <- r
+  cc <- 2
+  for(rr in seq(along=rny[(r+1):length(rny)])){
+    if(all(strsplit(rny[r],'_')[[1]][-3] ==  strsplit(rny[r+rr],'_')[[1]][-3])){
+      scIdx[c,cc] <- r+rr
+      cc <- cc+1
+      added <- c(added,r+rr)
+    }
+  }    
+}
+scIdxLab <- scIdx 
+
+scIdx <- matrix(-1,84,3)
+rny <- rownames(Y)
+added <- c()
+c <- 0
+
+## Replicates by region
+for(r in 1:(length(rny) - 1)){
+  if(r %in% added)
+    next
+  c <- c+1
+  scIdx[c,1] <- r
+  cc <- 2
+  for(rr in seq(along=rny[(r+1):length(rny)])){
+    if(all(strsplit(rny[r],'_')[[1]][-2] ==  strsplit(rny[r+rr],'_')[[1]][-2])){
+      scIdx[c,cc] <- r+rr
+      cc <- cc+1
+      added <- c(added,r+rr)
+    }
+  }
+}
+scIdx <- rbind(scIdxLab,scIdx)
+@
+
+\subsection{Correction}
+
+We now apply the correction methods and plot the corrected data. More
+specifically after each correction, we apply k-means clustering to the
+corrected gene expression matrix, and plot the projection of the
+samples onto the space spanned by the first two principal
+components. We plot the projections as we go, and summarize the
+clustering qualities in a table at the end of the vignette. We use the
+function \Rfunction{clScore} to compare the partition of the samples
+obtained using k-means to the ground truth (partition by gender).
+
+As described in~\cite{Jacob2012Correcting}, we only keep the $10\%$
+genes with the largest variance for clustering an computing the
+principal components.
+
+As a baseline, we start with the uncorrected gene expression matrix:
+
+<<uncorrected, echo=TRUE, results=hide>>=
+
+## Sort genes by their standard deviation
+sdY <- apply(Y, 2, sd)
+ssd <- sort(sdY, decreasing=TRUE, index.return=TRUE)$ix
+
+## Cluster the samples
+kmres <- kmeans(Y[, ssd[1:nKeep], drop=FALSE], centers=2, nstart=200)
+vclust <- kmres$cluster
+
+## Compute the distance between clustering by gender 
+## and clustering obtained by k-means
+uScore <- clScore(vclust,X)
+@ 
+
+We then plot the first two principal components for the uncorrected
+gene expression matrix.
+
+\begin{figure}
+  \centering
+<<uncorrectedPlot, echo=TRUE, results=hide, fig=TRUE>>=
+svdResUncorr <- svdPlot(Y[, ssd[1:nKeep], drop=FALSE], 
+                        annot=annot, 
+                        labels=lab.and.region, 
+                        svdRes=NULL, 
+                        plAnnots=plAnnots, 
+                        kColors=gender.col, file=NULL)
+@
+\caption{Samples of the gender study represented in the space of their
+  first two principal components before correction. Blue samples are
+  males, pink samples are females. The upper case letter represents the
+  lab, the lower case one is the brain region.}
+\end{figure}
+
+The plot suggests that without correction, the observed gene
+expression is mainly driven by a lab effect (PC1) and a brain region
+effect (PC2).
+
+In the rest of the vignette, we apply the same steps (clustering and
+PCA plot) after centering genes by lab-region batch, using naive
+RUV-2, random naive RUV-2, the replicate based correction and
+iterative corrections based on replicates and negative control genes
+only. See~\cite{Jacob2012Correcting} for more details about the
+correction methods.
+
+<<MC, echo=TRUE, results=hide>>=
+## Centering by region-lab
+YmeanCorr <- Y
+for(rr in unique(lregions)){
+  for(ll in unique(llabs)){
+    YmeanCorr[(lregions==rr)&(llabs==ll),] <- scale(YmeanCorr[(lregions==rr)&(llabs==ll),],scale=FALSE)
+  }
+}
+
+sdY <- apply(YmeanCorr, 2, sd)
+ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
+
+kmresMC <- kmeans(YmeanCorr[,ssd[1:nKeep],drop=FALSE],centers=2,nstart=200)
+vclustMC <- kmresMC$cluster
+MCScore <- clScore(vclustMC, X)
+@ 
+
+\begin{figure}
+  \centering
+<<MCPlot, echo=TRUE, results=hide, fig=TRUE>>=
+svdResMC <- svdPlot(YmeanCorr[, ssd[1:nKeep], drop=FALSE], 
+                    annot=annot, 
+                    labels=lab.and.region, 
+                    svdRes=NULL, 
+                    plAnnots=plAnnots,                     
+                    kColors=gender.col, file=NULL)    
+@ 
+\caption{Samples of the gender study represented in the space of their
+  first two principal components after mean centering genes withing
+  each region/lab groups. Blue samples are males, pink samples are
+  females. The upper case letter represents the
+  lab, the lower case one is the brain region.}
+\end{figure}
+
+The plot shows that centering removed the lab and brain region
+effects, but not in a way that leads to a clustering by gender. The
+following methods lead to a removal of the lab and brain region
+effects which leads to a better clustering of the samples by gender.
+
+<<nsRUV2, echo=TRUE, results=hide, fig=FALSE>>=
+## Naive RUV-2 no shrinkage
+k <- 20
+nu <- 0
+
+nsY <- naiveRandRUV(Y, cIdx, nuCoeff=0, k=k)
+
+sdY <- apply(nsY, 2, sd)
+ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
+
+kmres2ns <- kmeans(nsY[,ssd[1:nKeep],drop=FALSE],centers=2,nstart=200)
+vclust2ns <- kmres2ns$cluster
+nsScore <- clScore(vclust2ns, X)
+@ 
+
+\begin{figure}
+  \centering
+<<nsRUV2plot, echo=TRUE, results=hide, fig=TRUE>>=
+svdRes2ns <- svdPlot(nsY[, ssd[1:nKeep], drop=FALSE], 
+                     annot=annot, 
+                     labels=lab.and.region, 
+                     svdRes=NULL, 
+                     plAnnots=plAnnots,                     
+                     kColors=gender.col, file=NULL)    
+@ 
+\caption{Samples of the gender study represented in the space of their
+  first two principal components after applying the naive RUV-2
+  correction \Rfunction{naiveRandRUV} with rank reduction ($k=20$) and
+  no shrinkage ($\nu=0$). Blue samples are males, pink samples are
+  females. The upper case letter represents the
+  lab, the lower case one is the brain region.}
+\end{figure}
+
+
+<<sRUV2, echo=TRUE, results=hide>>=
+## Naive RUV-2 + shrinkage
+
+k <- m
+nu.coeff <- 1e-3
+
+nY <- naiveRandRUV(Y, cIdx, nuCoeff=nu.coeff, k=k)
+
+sdY <- apply(nY, 2, sd)
+ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
+
+kmres2 <- kmeans(nY[,ssd[1:nKeep],drop=FALSE],centers=2,nstart=200)
+vclust2 <- kmres2$cluster
+nScore <- clScore(vclust2,X)
+@
+
+\begin{figure}
+  \centering
+<<sRUV2plot, echo=TRUE, results=hide, fig=TRUE>>=
+svdRes2 <- svdPlot(nY[, ssd[1:nKeep], drop=FALSE], 
+                     annot=annot, 
+                     labels=lab.and.region, 
+                     svdRes=NULL, 
+                     plAnnots=plAnnots,                     
+                     kColors=gender.col, file=NULL)    
+@ 
+\caption{Samples of the gender study represented in the space of their
+  first two principal components after applying the naive RUV-2
+  correction \Rfunction{naiveRandRUV} using no rank reduction ($k=m$)
+  but shrinkage $\nu\neq 0$. Blue samples are males, pink samples are
+  females. The upper case letter represents the
+  lab, the lower case one is the brain region.}
+\end{figure}
+
+<<rep, echo=TRUE, results=hide>>=
+## Replicate-based
+
+sRes <- naiveReplicateRUV(Y, cIdx, scIdx, k=20)
+
+sdY <- apply(sRes$cY, 2, sd)
+ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
+
+kmresRep <- kmeans(sRes$cY[,ssd[1:nKeep],drop=FALSE],centers=2,nstart=200)
+vclustRep <- kmresRep$cluster
+RepScore <- clScore(vclustRep,X)
+@ 
+
+\begin{figure}
+  \centering
+<<repplot, echo=TRUE, results=hide, fig=TRUE>>=
+svdResRep <- svdPlot(sRes$cY[, ssd[1:nKeep], drop=FALSE], 
+                     annot=annot, 
+                     labels=lab.and.region, 
+                     svdRes=NULL, 
+                     plAnnots=plAnnots,                     
+                     kColors=gender.col, file=NULL)    
+@
+\caption{Samples of the gender study represented in the space of their
+  first two principal components after applying the replicate based
+  correction \Rfunction{naiveReplicateRUV}. Blue samples are males,
+  pink samples are females. The upper case letter represents the
+  lab, the lower case one is the brain region.}
+\end{figure}
+
+The last two correction methods are iterative: they start by a
+computing a naive estimate of the $W\alpha$ unwanted variation term,
+then estimate a term of interest $X\beta$ from the residuals $Y -
+W\alpha$, re-estimate $W\alpha$ from $Y-X\beta$ and iterate between
+these two steps for a fixed number of steps or until some convergence
+is reached.
+
+In these example, the estimation of $X\beta$ given $W\alpha$ is done
+using a sparse dictionary learning
+method~\citep{Mairal2010Sparse}. The choice of the regularization
+parameters is discussed in~\cite{Jacob2012Correcting}. The
+\texttt{paramXb} variable corresponds to the parameters of the sparse
+dictionary learning method. The \texttt{D}, \texttt{batch},
+\texttt{iter} and \texttt{mode} should not be modified unless you are
+familiar with \cite{Mairal2010Sparse} and know precisely what you are
+doing. \texttt{K} corresponds to the rank of $X$, \emph{i.e.}, $p$ in
+our notation, and \texttt{lambda} is the regularization
+parameter. Large values of \texttt{lambda} lead to sparser, more
+shrunk estimates of $\beta$.
+
+<<rep-iter, echo=TRUE, results=hide>>=
+if (require(spams)){
+  ## Iterative replicate-based
+  cEps <- 1e-6
+  maxIter <- 30
+  p <- 20
+
+  paramXb <- list()
+  paramXb$K <- p
+  paramXb$D <- matrix(c(0.),nrow = 0,ncol=0)
+  paramXb$batch <- TRUE
+  paramXb$iter <- 1
+
+  ## l1
+  paramXb$mode <- 'PENALTY'
+  paramXb$lambda <- 0.25 
+
+  iRes <- iterativeRUV(Y, cIdx, scIdx, paramXb, k=20, nu.coeff=0,
+  cEps, maxIter,
+  Wmethod='rep', wUpdate=11)
+
+  ucY <- iRes$cY
+
+  sdY <- apply(ucY, 2, sd)
+  ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
+
+  kmresIter <- kmeans(ucY[,ssd[1:nKeep]],centers=2,nstart=200)
+  vclustIter <- kmresIter$cluster
+  IterScore <- clScore(vclustIter,X)
+}else{
+    IterScore <- NA
+}
+@ 
+
+\ifnum \Sexpr{as.numeric(require(spams))} > 0 {
+  \begin{figure}
+    \centering
+    <<rep-iterplot, echo=TRUE, results=hide, fig=TRUE>>=
+    svdResIter <- svdPlot(ucY[, ssd[1:nKeep], drop=FALSE], 
+    annot=annot, 
+    labels=lab.and.region, 
+    svdRes=NULL, 
+    plAnnots=plAnnots,                     
+    kColors=gender.col, file=NULL)    
+    @
+    \caption{Samples of the gender study represented in the space of their
+      first two principal components after applying the iterative
+      correction \Rfunction{iterativeRUV} with replicates (Wmethod =
+      'rep'). Blue samples are males, pink samples are females. The upper case letter represents the
+      lab, the lower case one is the brain region.}
+  \end{figure}
+} \fi
+
+<<ridge-iter, echo=TRUE, results=hide>>=
+if (require(spams)){
+  ## Iterated ridge
+  paramXb <- list()
+  paramXb$K <- p
+  paramXb$D <- matrix(c(0.),nrow = 0,ncol=0)
+  paramXb$batch <- TRUE
+  paramXb$iter <- 1
+  paramXb$mode <- 'PENALTY' #2
+  paramXb$lambda <- 6e-2
+  paramXb$lambda2 <- 0
+
+  iRes <- iterativeRUV(Y, cIdx, scIdx=NULL, paramXb, k=nrow(Y), nu.coeff=1e-3/2,
+  cEps, maxIter,
+  Wmethod='svd', wUpdate=11)
+
+  nrcY <- iRes$cY
+
+  sdY <- apply(nrcY, 2, sd)
+  ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
+
+  kmresIter <- kmeans(nrcY[,ssd[1:nKeep]],centers=2,nstart=200)
+  vclustIter <- kmresIter$cluster
+  IterRandScore <- clScore(vclustIter,X)
+}else{
+    IterRandScore <- NA
+}
+@ 
+
+\ifnum \Sexpr{as.numeric(require(spams))} > 0 {
+  \begin{figure}
+    \centering
+    <<ridge-iterplot, echo=TRUE, results=hide, fig=TRUE>>=
+    svdResIterRand <- svdPlot(nrcY[, ssd[1:nKeep], drop=FALSE], 
+    annot=annot, 
+    labels=lab.and.region, 
+    svdRes=NULL, 
+    plAnnots=plAnnots,                     
+    kColors=gender.col, file=NULL)    
+    @
+    \caption{Samples of the gender study represented in the space of their
+      first two principal components after applying the iterative method
+      \Rfunction{iterativeRUV} with negative control genes and shrinkage
+      (Wmethod='svd', nu.coeff $\neq 0$). Blue samples are males, pink
+      samples are females. The upper case letter represents the
+      lab, the lower case one is the brain region.}
+  \end{figure} \fi
+
+Finally, we summarize the clustering errors obtained after each
+correction in a single table:
+
+<<print-scores, echo=TRUE, results=verbatim>>=
+scores <- c(uScore, MCScore, nsScore, nScore, RepScore, IterScore, IterRandScore)
+names(scores) <- c('Uncorrected', 'Centered', 'Naive RUV-2', 'Naive + shrink', 'Replicates', 'Replicates + iter', 'Shrinkage + iter')
+print('Clustering errors after each correction')
+print(scores)
+@ 
+
+<<close-connections, echo=FALSE>>=
+graphics.off()
+@ 
+
+\section{Session Information}
+
+<<sessionInfo, echo=FALSE>>=
+sessionInfo()
+@
+
+\bibliographystyle{plainnat}
+\bibliography{bibli}
+
+\end{document}

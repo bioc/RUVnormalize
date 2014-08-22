@@ -1,0 +1,22 @@
+citEntry(
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # BibTeX entry:
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    entry="TechReport",
+    author = "Jacob, L. and Gagnon-Bartsch, J. and Speed, T. P.",
+    title = "Correcting gene expression data when neither the unwanted variation nor the factor of interest are observed",
+    institution = "arXiv",
+    year = "2012",
+    url = "http://arxiv.org/abs/1211.4259",
+    
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  # Plain-text citation:
+  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  textVersion = paste(
+      "Correcting gene expression data when neither the unwanted variation nor the factor of interest are observed",
+      "Laurent Jacob, Johann Gagnon-Bartsch and Terence P. Speed",
+      "2012", 
+      "technical report",
+      "http://arxiv.org/abs/1211.4259"
+  )
+)
