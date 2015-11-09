@@ -27,20 +27,20 @@
 
 
 naiveRandRUV <- function(Y, cIdx, nuCoeff=1e-3, k=nrow(Y)){
-
-  ## W is the square root of the empirical covariance on the control
-  ## genes.
+    
+    ## W is the square root of the empirical covariance on the control
+    ## genes.
   
-  svdYc <- svd(Y[, cIdx])
-  W <- svdYc$u[, 1:k] %*% diag(svdYc$d[1:k]) #/ sqrt(length(cIdx)+1)
-
-  ## Regularization heuristic: nu is a fraction of the largest eigenvalue of WW'
-  
-  nu <- nuCoeff*svdYc$d[1]^2 #/ (length(cIdx)+1)
-
-  ## Naive correction: ridge regression of Y against W
-  
-  nY <- Y - W %*% solve(t(W)%*%W + nu*diag(k), t(W) %*% Y)
-
-  return(nY)
+    svdYc <- svd(Y[, cIdx])
+    W <- svdYc$u[, 1:k, drop=FALSE] %*% diag(svdYc$d[1:k], nrow=k)
+    
+    ## Regularization heuristic: nu is a fraction of the largest eigenvalue of WW'
+    
+    nu <- nuCoeff*svdYc$d[1]^2 #/ (length(cIdx)+1)
+    
+    ## Naive correction: ridge regression of Y against W
+    
+    nY <- Y - W %*% solve(t(W)%*%W + nu*diag(k), t(W) %*% Y)
+    
+    return(nY)
 }
