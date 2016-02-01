@@ -49,6 +49,9 @@
 ## the last update of W. E.g, setting W to maxIter will only allow for
 ## one iteration of estimating alpha given (Xb, W) and no
 ## re-estimation of Xb.}
+##   \item{tol}{Smallest ratio allowed between a squared singular
+## value of Y[, cIdx] and the largest of these squared singular
+## values. All smaller singular values are discarded.}
 ##  }
 ##
 ## \value{
@@ -65,7 +68,7 @@
 
 iterativeRUV <- function(Y, cIdx, scIdx=NULL, paramXb, k, nu.coeff=0,
                          cEps=1e-8, maxIter=30,
-                         Wmethod='svd', Winit=NULL, wUpdate=maxIter+1){
+                         Wmethod='svd', Winit=NULL, wUpdate=maxIter+1, tol=1e-6){
 
     if (!require(spams)) {
         stop('This function requires the spams package to be loaded. Spams can be obtained for free from http://spams-devel.gforge.inria.fr/downloads.html')
@@ -109,6 +112,11 @@ iterativeRUV <- function(Y, cIdx, scIdx=NULL, paramXb, k, nu.coeff=0,
     }
     else if(Wmethod == 'svd'){ # Use random alpha model with control genes only
       svdYc <- svd(Y[, cIdx])
+      k.max <- sum(svdYc$d^2/svdYc$d[1]^2 > tol)
+      if(k > k.max){
+          warning(sprintf('k larger than the rank of Y[, cIdx]. Using k=%d instead', k.max))
+          k <- k.max
+      }
       W <- svdYc$u[,1:k] %*% diag(svdYc$d[1:k])
       nu <- nu.coeff * svdYc$d[1]^2
       a <- solve(t(W)%*%W + 2*nu*diag(k), t(W) %*% Y)
@@ -178,6 +186,11 @@ iterativeRUV <- function(Y, cIdx, scIdx=NULL, paramXb, k, nu.coeff=0,
       
       if(Wmethod == 'svd'){
         svdYmXb <- svd((Y - Xb), nu=k, nv=0)
+        k.max <- sum(svdYc$d^2/svdYc$d[1]^2 > tol)
+        if(k > k.max){
+            warning(sprintf('k larger than the rank of Y - Xb. Using k=%d instead', k.max))
+            k <- k.max
+        }
          W <- svdYmXb$u %*% diag(svdYmXb$d[1:k])
       }
       else if(Wmethod == 'rep'){        

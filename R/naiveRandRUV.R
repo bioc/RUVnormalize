@@ -16,6 +16,9 @@
 ##   \item{cIdx}{Column index of the negative control genes in Y, for estimation of unwanted variation.}
 ##   \item{nuCoeff}{Regularization parameter for the unwanted variation.}
 ##   \item{k}{Desired rank for the estimated unwanted variation term.}
+##   \item{tol}{Smallest ratio allowed between a squared singular
+## value of Y[, cIdx] and the largest of these squared singular
+## values. All smaller singular values are discarded.}
 ## }
 ##
 ## \value{ A @matrix corresponding to the gene expression after
@@ -25,13 +28,17 @@
 ##
 ##*/########################################################################
 
-
-naiveRandRUV <- function(Y, cIdx, nuCoeff=1e-3, k=nrow(Y)){
+naiveRandRUV <- function(Y, cIdx, nuCoeff=1e-3, k=min(nrow(Y), length(cIdx)), tol=1e-6){
     
     ## W is the square root of the empirical covariance on the control
     ## genes.
   
-    svdYc <- svd(Y[, cIdx])
+    svdYc <- svd(Y[, cIdx, drop=FALSE])
+    k.max <- sum(svdYc$d^2/svdYc$d[1]^2 > tol)
+    if(k > k.max){
+        warning(sprintf('k larger than the rank of Y[, cIdx]. Using k=%d instead', k.max))
+        k <- k.max
+    }
     W <- svdYc$u[, 1:k, drop=FALSE] %*% diag(svdYc$d[1:k], nrow=k)
     
     ## Regularization heuristic: nu is a fraction of the largest eigenvalue of WW'

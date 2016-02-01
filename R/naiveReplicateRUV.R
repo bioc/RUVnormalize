@@ -52,7 +52,7 @@
 ##*/########################################################################
 
 
-naiveReplicateRUV <- function(Y, cIdx, scIdx, k, rrem=NULL, p=NULL, tol=1e-8)
+naiveReplicateRUV <- function(Y, cIdx, scIdx, k, rrem=NULL, p=NULL, tol=1e-6)
 {
 
   
@@ -97,10 +97,15 @@ naiveReplicateRUV <- function(Y, cIdx, scIdx, k, rrem=NULL, p=NULL, tol=1e-8)
   ## Estimation
   ##------------
   
-  ## Get alphas from control samples
-  svdRes <- svd(Y[sctl,], nu=0, nv=k)
-  
-  k <- min(k, max(which(svdRes$d > tol))) # Don't return directions with 0 variance
+    ## Get alphas from control samples
+    svdRes <- svd(Y[sctl,], nu=0, nv=k)
+    
+    k.max <- sum(svdRes$d > tol)
+    if(k > k.max){
+        warning(sprintf('k larger than the rank of the control sample matrix Y[sctl, ]. Using k=%d instead', k.max))
+        k <- k.max
+    }
+  ## k <- min(k, max(which(svdRes$d > tol))) # Don't return directions with 0 variance
   a <- t(as.matrix(svdRes$v[, 1:k]))
 
   ## Get W from alphas and control genes (by regression)

@@ -6,8 +6,8 @@ citEntry(
     author = "Jacob, L. and Gagnon-Bartsch, J. and Speed, T. P.",
     title = "Correcting gene expression data when neither the unwanted variation nor the factor of interest are observed",
     journal = "Biostatistics",
-    year = "2015",
-    url = "http://biostatistics.oxfordjournals.org/content/early/2015/08/17/biostatistics.kxv026.full",
+    year = "2016",
+    url = "http://biostatistics.oxfordjournals.org/content/17/1/16.full.pdf+html",
     
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
   # Plain-text citation:
@@ -15,8 +15,8 @@ citEntry(
   textVersion = paste(
       "Correcting gene expression data when neither the unwanted variation nor the factor of interest are observed",
       "Laurent Jacob, Johann Gagnon-Bartsch and Terence P. Speed",
-      "2015", 
+      "2016", 
       "Biostatistics",
-      "http://biostatistics.oxfordjournals.org/content/early/2015/08/17/biostatistics.kxv026.full"
+      "http://biostatistics.oxfordjournals.org/content/17/1/16.full.pdf+html"
   )
 )
