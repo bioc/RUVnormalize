@@ -358,7 +358,7 @@ effects which leads to a better clustering of the samples by gender.
 k <- 20
 nu <- 0
 
-nsY <- naiveRandRUV(Y, cIdx, nuCoeff=0, k=k)
+nsY <- naiveRandRUV(Y, cIdx, nu.coeff=0, k=k)
 
 sdY <- apply(nsY, 2, sd)
 ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
@@ -393,7 +393,7 @@ svdRes2ns <- svdPlot(nsY[, ssd[1:nKeep], drop=FALSE],
 k <- m
 nu.coeff <- 1e-3
 
-nY <- naiveRandRUV(Y, cIdx, nuCoeff=nu.coeff, k=k)
+nY <- naiveRandRUV(Y, cIdx, nu.coeff=nu.coeff, k=k)
 
 sdY <- apply(nY, 2, sd)
 ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix

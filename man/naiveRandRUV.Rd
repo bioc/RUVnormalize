@@ -9,17 +9,43 @@ unwanted variation from these control genes, and removes them by
 regression, using ridge and/or rank regularization.}
 
 \usage{
-naiveRandRUV(Y, cIdx, nuCoeff=0.001, k=min(nrow(Y), length(cIdx)), tol=1e-6)
+naiveRandRUV(Y, cIdx, nu.coeff=0.001, k=min(nrow(Y), length(cIdx)), tol=1e-6)
 }
 
 \arguments{
   \item{Y}{Expression matrix where the rows are the samples and the columns are the genes.}
   \item{cIdx}{Column index of the negative control genes in Y, for estimation of unwanted variation.}
-  \item{nuCoeff}{Regularization parameter for the unwanted variation.}
+  \item{nu.coeff}{Regularization parameter for the unwanted variation.}
   \item{k}{Desired rank for the estimated unwanted variation term.}
   \item{tol}{Smallest ratio allowed between a squared singular
 value of Y[, cIdx] and the largest of these squared singular
 values. All smaller singular values are discarded.}
+}
+
+\details{In terms of model, the rank k can be thought of as the
+number of independent sources of unwanted variation in the data (i.e.,
+if one source is a linear combination of other sources, it does not
+increase the rank). The ridge nu.coeff should be inversely proportional
+to the (expected) magnitude of the unwanted variation.
+
+In practice, even if the real number of independent sources of unwanted
+variation (resp. their magnitude) is known, using a smaller k (resp.,
+larger ridge) could yield better corrections because one may not have
+enough samples to effectively estimate all the effects.
+
+More intuition and guidance on the practical choice of these parameters are available in the paper
+(\url{http://biostatistics.oxfordjournals.org/content/17/1/16.full}) and its
+supplement
+(\url{http://biostatistics.oxfordjournals.org/content/suppl/2015/08/17/kxv026.DC1/kxv026supp.pdf}). In
+particular:
+- Equation 2.3 in the manuscript gives an interpretation of the
+ridge parameter in terms of a probabilistic model.
+- Section 5.1 of the manuscript provides guidelines to select both
+parameters on real data.
+- Section 3 of the supplement compares the effect of reducing the
+  rank and increasing the ridge.
+- Section 4 of the supplement gives a detailed discussion of how to
+  select the ridge parameter on a real example.
 }
 
 \value{ A \code{\link[base]{matrix}} corresponding to the gene expression after
@@ -73,7 +99,7 @@ values. All smaller singular values are discarded.}
          nu <- 0
      
          ## Correction
-         nsY <- naiveRandRUV(Y, cIdx, nuCoeff=0, k=k)
+         nsY <- naiveRandRUV(Y, cIdx, nu.coeff=0, k=k)
      
          ## Clustering of the corrected data
          sdY <- apply(nsY, 2, sd)
@@ -99,7 +125,7 @@ values. All smaller singular values are discarded.}
          nu.coeff <- 1e-2
      
          ## Correction
-         nY <- naiveRandRUV(Y, cIdx, nuCoeff=nu.coeff, k=k)
+         nY <- naiveRandRUV(Y, cIdx, nu.coeff=nu.coeff, k=k)
      
          ## Clustering of the corrected data
          sdY <- apply(nY, 2, sd)

@@ -134,7 +134,7 @@ if(require('RUVnormalizeData')){
     k <- 20
     nu <- 0
 
-    nsY <- naiveRandRUV(Y, cIdx, nuCoeff=0, k=k)
+    nsY <- naiveRandRUV(Y, cIdx, nu.coeff=0, k=k)
 
     sdY <- apply(nsY, 2, sd)
     ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix
@@ -156,7 +156,7 @@ if(require('RUVnormalizeData')){
     k <- m
     nu.coeff <- 1e-2
 
-    nY <- naiveRandRUV(Y, cIdx, nuCoeff=nu.coeff, k=k)
+    nY <- naiveRandRUV(Y, cIdx, nu.coeff=nu.coeff, k=k)
 
     sdY <- apply(nY, 2, sd)
     ssd <- sort(sdY,decreasing=TRUE,index.return=TRUE)$ix

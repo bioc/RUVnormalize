@@ -39,6 +39,17 @@ estimate UV but which should not be included in the analysis.}
   replicate samples are dropped (which may result in an estimated
   unwanted variation term of rank smaller than k).}}
 
+\details{In terms of model, the rank k can be thought of as the
+number of independent sources of unwanted variation in the data (i.e.,
+if one source is a linear combination of other sources, it does not
+increase the rank).
+
+In practice, even if the real number of independent sources of unwanted
+variation is known, using a smaller k (resp.,
+larger ridge) could yield better corrections because one may not have
+enough samples to effectively estimate all the effects.
+}
+
 \value{A \code{\link[base]{list}} containing the following terms:
  \item{X, b}{if p is not NULL, contains an estimate of the factor
  of interest (X) and its effect (beta) obtained using rank-p
