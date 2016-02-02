@@ -14,7 +14,7 @@
 ## \arguments{
 ##   \item{Y}{Expression matrix where the rows are the samples and the columns are the genes.}
 ##   \item{cIdx}{Column index of the negative control genes in Y, for estimation of unwanted variation.}
-##   \item{nuCoeff}{Regularization parameter for the unwanted variation.}
+##   \item{nu.coeff}{Regularization parameter for the unwanted variation.}
 ##   \item{k}{Desired rank for the estimated unwanted variation term.}
 ## }
 ##
