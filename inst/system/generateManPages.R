@@ -14,7 +14,7 @@ destPath <- Arguments$getWritablePath(destPath)
 
 print(rdocFiles)
 
-dummy <- lapply(rdocFiles, Rdoc$compile, destPath=destPath)
+dummy <- lapply(rdocFiles, Rdoc$compile, destPath=destPath, verbose=TRUE, debug=TRUE)
      
 ## List the generated Rd files
 rdFiles <- list.files(destPath, full.names=TRUE)
