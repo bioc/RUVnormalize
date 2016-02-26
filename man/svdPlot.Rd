@@ -101,7 +101,7 @@ if(require('RUVnormalizeData')){
     nu <- 0
     
     ## Correction
-    nsY <- naiveRandRUV(Y, cIdx, nu.coeff=0, k=k)
+    nsY <- naiveRandRUV(Y, cIdx, nuCoeff=0, k=k)
     
     ## Clustering of the corrected data
     sdY <- apply(nsY, 2, sd)
@@ -127,7 +127,7 @@ if(require('RUVnormalizeData')){
     nu.coeff <- 1e-2
     
     ## Correction
-    nY <- naiveRandRUV(Y, cIdx, nu.coeff=nu.coeff, k=k)
+    nY <- naiveRandRUV(Y, cIdx, nuCoeff=nu.coeff, k=k)
     
     ## Clustering of the corrected data
     sdY <- apply(nY, 2, sd)

@@ -15,7 +15,7 @@ naiveRandRUV(Y, cIdx, nuCoeff=0.001, k=min(nrow(Y), length(cIdx)), tol=1e-6)
 \arguments{
   \item{Y}{Expression matrix where the rows are the samples and the columns are the genes.}
   \item{cIdx}{Column index of the negative control genes in Y, for estimation of unwanted variation.}
-  \item{nu.coeff}{Regularization parameter for the unwanted variation.}
+  \item{nuCoeff}{Regularization parameter for the unwanted variation.}
   \item{k}{Desired rank for the estimated unwanted variation term.}
   \item{tol}{Smallest ratio allowed between a squared singular
 value of Y[, cIdx] and the largest of these squared singular
@@ -25,7 +25,7 @@ values. All smaller singular values are discarded.}
 \details{In terms of model, the rank k can be thought of as the
 number of independent sources of unwanted variation in the data (i.e.,
 if one source is a linear combination of other sources, it does not
-increase the rank). The ridge nu.coeff should be inversely proportional
+increase the rank). The ridge nuCoeff should be inversely proportional
 to the (expected) magnitude of the unwanted variation.
 
 In practice, even if the real number of independent sources of unwanted
