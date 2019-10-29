@@ -1,6 +1,6 @@
 Package: RUVnormalize
 Title: RUV for normalization of expression array data
-Version: 1.20.0
+Version: 1.21.0
 Date: 2013-11-10
 Author: Laurent Jacob
 Maintainer: Laurent Jacob <laurent.jacob@univ-lyon1.fr>
