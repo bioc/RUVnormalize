@@ -111,13 +111,13 @@ iterativeRUV <- function(Y, cIdx, scIdx=NULL, paramXb, k, nu.coeff=0,
       nu <- nu.coeff*svd(W)$d[1]^2
     }
     else if(Wmethod == 'svd'){ # Use random alpha model with control genes only
-      svdYc <- svd(Y[, cIdx])
+      svdYc <- svd(Y[, cIdx, drop=FALSE])
       k.max <- sum(svdYc$d^2/svdYc$d[1]^2 > tol)
       if(k > k.max){
           warning(sprintf('k larger than the rank of Y[, cIdx]. Using k=%d instead', k.max))
           k <- k.max
       }
-      W <- svdYc$u[,1:k] %*% diag(svdYc$d[1:k])
+      W <- svdYc$u[, 1:k, drop=FALSE] %*% diag(svdYc$d[1:k], nrow=k)
       nu <- nu.coeff * svdYc$d[1]^2
       a <- solve(t(W)%*%W + 2*nu*diag(k), t(W) %*% Y)
     }else{
@@ -191,7 +191,7 @@ iterativeRUV <- function(Y, cIdx, scIdx=NULL, paramXb, k, nu.coeff=0,
             warning(sprintf('k larger than the rank of Y - Xb. Using k=%d instead', k.max))
             k <- k.max
         }
-         W <- svdYmXb$u %*% diag(svdYmXb$d[1:k])
+         W <- cbind(svdYmXb$u) %*% diag(svdYmXb$d[1:k], nrow=k)
       }
       else if(Wmethod == 'rep'){        
         aRep <- t(svd(rbind((Y - Xb), Yctls), nu=0, nv=k)$v)

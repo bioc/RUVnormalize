@@ -106,10 +106,10 @@ naiveReplicateRUV <- function(Y, cIdx, scIdx, k, rrem=NULL, p=NULL, tol=1e-6)
         k <- k.max
     }
   ## k <- min(k, max(which(svdRes$d > tol))) # Don't return directions with 0 variance
-  a <- t(as.matrix(svdRes$v[, 1:k]))
+  a <- t(as.matrix(svdRes$v[, 1:k, drop=FALSE]))
 
   ## Get W from alphas and control genes (by regression)
-  W <- Y[, cIdx] %*% t(solve(a[, cIdx, drop=FALSE] %*% t(a[, cIdx, drop=FALSE]), a[, cIdx, drop=FALSE]))
+  W <- Y[, cIdx, drop=FALSE] %*% t(solve(a[, cIdx, drop=FALSE] %*% t(a[, cIdx, drop=FALSE]), a[, cIdx, drop=FALSE]))
   
   ## Get Xb from Wa (optional)
 
